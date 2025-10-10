@@ -13,6 +13,7 @@ if(isset($_POST['registrar'])){
     $username = $_POST['username'];
     $email = $_POST['email'];
     $contrasena = $_POST["password"];
+    $avatar = 1;
     $rol = 2;
 
     $sql = $con -> prepare("SELECT * FROM usuario WHERE username='$username' OR documento='$doc'");
@@ -22,12 +23,12 @@ if(isset($_POST['registrar'])){
     if($fila){
         echo '<script>alert ("Documento o usuario existen//");</script>';
     }else
-        if($doc=="" || $username=="" || $email=="" || $contrasena=="" || $rol=="")
+        if($doc=="" || $username=="" || $email=="" || $contrasena=="" || $avatar=="" || $rol=="")
         {
             echo '<script>alert ("EXISTEN DATOS VACIOS");</script>';
     }else{
         $hashing=password_hash($contrasena, PASSWORD_DEFAULT,array("password"=>12));
-        $insertSQL = $con ->prepare(query: "INSERT INTO `usuario` (`documento`, `username`, `email`, `password`, `id_role`) VALUES ('$doc', '$username', '$email', '$hashing', '$rol');");
+        $insertSQL = $con ->prepare(query: "INSERT INTO `usuario` (`documento`, `username`, `email`, `password`, `id_avatar`, `id_role`) VALUES ('$doc', '$username', '$email', '$hashing', '$avatar', '$rol');");
         $insertSQL->execute();
         echo '<script>alert ("Registro exitoso");</script>';
     }
@@ -130,6 +131,9 @@ if(isset($_POST['registrar'])){
         <input type="email" class="form-control mb-3" name="email" placeholder="email" required>
         <input type="password" class="form-control mb-3" name="password" placeholder="password" required>
         <button type="submit" name="registrar" class="btn btn-mk w-100 py-2 text-white">Registrar</button>
+            <div class="acciones mt-3">
+                <a href="index.html" class="d-block">volver</a>
+            </div>
     </form>
     </div>
 </body>

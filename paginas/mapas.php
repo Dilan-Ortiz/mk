@@ -51,6 +51,7 @@
         transform: scale(1.30);
     }
 
+    
     .card-img-top img {
         max-width: 100%;
         max-height: 100%;
@@ -64,10 +65,10 @@
         <h1 class="title">Selecciona un mapa</h1>
         <div class="d-flex gap-4 m-4 justify-content-center">
             <div class="card" style="width: 26rem;">
-                <img src="../img/mapa1.png" class="card-img-top" alt="">
+                <a href="sala.php"><img src="../img/mapa1.png" class="card-img-top" alt=""></a>
             </div>
             <div class="card" style="width: 26rem;">
-                <img src="../img/mapa2.png" class="card-img-top" alt="">
+                <a href="sala.php"><img src="../img/mapa2.png" class="card-img-top" alt=""></a>
             </div>
         </div>
     </div>

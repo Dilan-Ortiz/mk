@@ -17,12 +17,13 @@ if (isset($_POST['entrar'])) {
 
         if ($fila) {
             if (password_verify($contrasena, $fila['password'])) {
+                $_SESSION['documento'] = $fila['documento'];
                 $_SESSION['username'] = $fila['username'];
                 $_SESSION['password'] = $fila['password'];
                 $_SESSION['nombre'] = $fila['id_role'];
 
                 if ($_SESSION['nombre'] == 1) {
-                    header("Location: ../admin/admin.php");
+                    header("Location: /MK/admin/admin.php");
                     exit();
                 }
                 if ($_SESSION['nombre'] == 2) {

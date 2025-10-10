@@ -1,11 +1,84 @@
 <?php
 
-session_start();
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+require 'PHPMailer/Exception.php';
+require 'PHPMailer/PHPMailer.php';
+require 'PHPMailer/SMTP.php';
+
 require_once("../config/database.php");
 $db = new Database();
 $con = $db->conectar();
+session_start();
 
+if (isset($_POST['enviar'])) {
+    $elEmail = $_POST['email'];
+
+    if (empty($elEmail)) {
+        echo "<script>alert('El campo correo está vacío');</script>";
+        die();
+    }
+
+    // Consultar si el correo existe
+    $Cemail = $con->prepare("SELECT email FROM usuario WHERE email = :email");
+    $Cemail->bindParam(":email", $elEmail);
+
+    $Cemail->execute();
+    $Cenviar = $Cemail->fetchColumn();
+
+    // Obtener datos del usuario
+    $user = $con->prepare("SELECT * FROM usuario WHERE email = :email");
+    $user->bindParam(":email", $elEmail);
+    $user->execute();
+    $usuario = $user->fetch(PDO::FETCH_ASSOC);
+
+    if ($usuario) {
+        // Generar un código aleatorio
+        $numero_aleatorio = rand(1000, 9999);
+
+        $_SESSION['usuario'] = $usuario['documento'];
+        $_SESSION['code'] = $numero_aleatorio;
+
+        if ($Cenviar) {
+            // Configuración de PHPMailer
+            $mail = new PHPMailer(true);
+
+            try {
+                // Server settings
+                $mail->isSMTP();
+                $mail->Host       = 'smtp.gmail.com';
+                $mail->SMTPAuth   = true;
+                $mail->Username   = 'dilansantiortizm@gmail.com'; // tu correo
+                $mail->Password   = 'lzjq nhvv fliv bvtn'; // usa contraseña de aplicación
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->Port       = 587;
+
+                // Recipientes
+                $mail->setFrom('dilansantiortizm@gmail.com', 'Dilan');
+                $mail->addAddress($Cenviar);
+
+                // Contenido
+                $mail->isHTML(true);
+                $mail->Subject = 'MORTAL KOMBAT - Reestablecer contraseña';
+                $mail->Body    = "Su código para restablecer la contraseña es el siguiente: <b>" . $_SESSION['code'] . "</b>";
+                $mail->AltBody = "Su código para restablecer la contraseña es: " . $_SESSION['code'];
+
+                $mail->send();
+
+                header("Location: verify_code.php");
+                exit();
+            } catch (Exception $e) {
+                echo "El mensaje no pudo ser enviado. Error: {$mail->ErrorInfo}";
+            }
+        }
+    } else {
+        echo "<script>alert('Correo no encontrado');</script>";
+    }
+}
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="es">
@@ -98,11 +171,11 @@ $con = $db->conectar();
     <h2>¿olvidaste tu contraseña?</h2>
     
     <form action="" method="POST">
-        <input type="email" class="form-control mb-3" name="correo" placeholder="ingrese su correo aqui" required>
-        <button type="submit" class="btn btn-mk w-100 py-2 text-white">Enviar</button>
+        <input type="email" class="form-control mb-3" name="email" id="email" placeholder="ingrese su correo aqui" required>
+        <button type="submit" name="enviar" id="enviar" class="btn btn-mk w-100 py-2 text-white">Enviar</button>
     </form>
       <div class="acciones mt-3">
-        <a href="index.html" class="d-block">volver</a>
+        <a href="../index.html" class="d-block">volver</a>
       </div>
     </div>
 </body>

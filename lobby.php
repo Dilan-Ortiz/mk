@@ -1,3 +1,11 @@
+<?php
+session_start();
+require_once 'config/database.php';
+$db = new Database();
+$con = $db->conectar();
+
+$username = $_SESSION['username'];
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -40,15 +48,22 @@
       color: #fff;
       border: none;
       border-radius: 6px;
-      background: linear-gradient(90deg, #2b2b2b, #1c1c1c);
+      background: linear-gradient(90deg, #2b2b2b56, #1c1c1c44);
       box-shadow: 0 4px 8px rgba(0,0,0,0.6);
       transition: all 0.2s ease;
     }
     .btn-ff:hover {
       transform: scale(1.05);
-      background: linear-gradient(90deg, #ffb703, #fb8500);
+      background: linear-gradient(90deg, #8b030363, #a00);
     }
 
+
+    .btn-ff img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+    
     .btn-ff-yellow {
       background: linear-gradient(90deg, #ffb703, #fb8500);
       color: #000;
@@ -57,8 +72,6 @@
       background: linear-gradient(90deg, #ff9e00, #d97706);
       color: #fff;
     }
-
-
     .character {
       text-align: center;
     }
@@ -84,12 +97,48 @@
   border-radius: 8px;
 }
 
+.progress-top {
+  position: absolute;
+      top: 20px;
+      left: 20px;
+      color: #dbf306ff;
+      font-weight: bold;
+      font-size: 18px;
+      padding: 10px 20px;
+      background: #1a1a1a15;
+      border-radius: 10px;
+      animation: progress-top 2s infinite alternate;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+}
+
+.progress-top meter {
+  width: 300px;
+  height: 20px;
+}
+  @keyframes progress-top {
+      0% {
+        box-shadow: 0 0 10px #a00, 0 0 10px #ff3300, 0 0 20px #ff0000;
+      }
+      100% {
+        box-shadow: 0 0 25px #ffcc00, 0 0 10px #ff6600, 0 0 20px #a00;
+      }
+    }
   </style>
 </head>
 <body>
 
   <div class="menu-container">
+    <div class="progress-top">
+      <h4> <?php echo $username;?></h4>
+      <a href="" onclick="window.open ('avatar.php', '', 'width=500, height=500, toolbar=no'); void(null);" class="btn">
+        <img src="uploads/stryker.png" alt="avatar" style="height:40px; vertical-align: middle; margin-right: 10px;"></a>
+  <label>Progreso:</label>
+  <meter value="80" min="0" max="100" low="33" high="66" optimum="100"></meter>
+</div>
     <div class="menu-left">
+      <div class="btn-ff"> <img src="img/armas/kunai.png" alt="avatar"></div>
       <button class="btn-ff" onclick="window.location.href='paginas/personajes.php'"><i class="fas fa-users"></i> Personajes</button>
       <button class="btn-ff" onclick="window.location.href='paginas/estadisticas.php'"><i class="fas fa-chart-bar"></i> Estadísticas</button>
       <button class="btn-ff" onclick="window.location.href='paginas/armas.php'"> <i class="fas fa-gun"></i> Armas</button>
@@ -101,10 +150,10 @@
     </div>
 
     <div class="menu-right">
-      <button class="btn-ff" onclick="window.location.href='paginas/mapas.php'"><i class="fas fa-map"></i> Mapas</button>
+      
+      <div class="btn-ff"> <img src="img/mapa1.png" alt=""></div>
     </div>
-
-    <button class="btn-ff-yellow btn-iniciar"><i class="fas fa-play"></i> Iniciar</button>
+        <button class="btn-ff-yellow btn-iniciar" onclick="window.location.href='/mk/paginas/mapas.php'"><i class="fas fa-play"></i> Iniciar</button>
   </div>
 
 </body>
