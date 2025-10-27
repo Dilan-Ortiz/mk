@@ -5,6 +5,32 @@ $db = new Database();
 $con = $db->conectar();
 
 $username = $_SESSION['username'];
+
+// Obtener datos del usuario
+$sqlusuario = $con->prepare("SELECT 
+  u.puntos_actuales, u.id_nivel, n.nombre AS nombre_nivel, n.puntos_requeridos, n.imagen_url, id_personaje
+FROM usuario u 
+INNER JOIN niveles n ON u.id_nivel = n.id_nivel 
+WHERE u.username = :username");
+$sqlusuario->bindParam(':username', $username);
+$sqlusuario->execute();
+$usuario = $sqlusuario->fetch(PDO::FETCH_ASSOC);
+
+// Obtener avatar actual
+$sqlavatar  = $con->prepare("SELECT * FROM avatar WHERE id_avatar = (SELECT id_avatar FROM usuario WHERE username = :username)");
+$sqlavatar->bindParam(':username', $username);
+$sqlavatar->execute();
+$avatar = $sqlavatar->fetch(PDO::FETCH_ASSOC);
+
+// Obtener imagen del personaje seleccionado
+$imagen_personaje = null;
+if (!empty($usuario['id_personaje'])) {
+    $sqlpersonaje = $con->prepare("SELECT personaje_foto FROM personaje WHERE id_personaje = :id");
+    $sqlpersonaje->bindParam(':id', $usuario['id_personaje']);
+    $sqlpersonaje->execute();
+    $personaje = $sqlpersonaje->fetch(PDO::FETCH_ASSOC);
+    $imagen_personaje = $personaje['personaje_foto'] ?? null;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -19,7 +45,7 @@ $username = $_SESSION['username'];
     body {
       margin: 0;
       padding: 0;
-      background: url("img/lobby2.png") no-repeat center center fixed;
+      background: url("img/lobby.png") no-repeat center center fixed;
       background-size: cover;
       font-family: 'Arial Black', sans-serif;
       height: 100vh;
@@ -52,32 +78,36 @@ $username = $_SESSION['username'];
       box-shadow: 0 4px 8px rgba(0,0,0,0.6);
       transition: all 0.2s ease;
     }
+
     .btn-ff:hover {
       transform: scale(1.05);
       background: linear-gradient(90deg, #8b030363, #a00);
     }
 
-
-    .btn-ff img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-}
-    
     .btn-ff-yellow {
-      background: linear-gradient(90deg, #ffb703, #fb8500);
+      background: linear-gradient(90deg, #ff0000, #a00);
       color: #000;
     }
+
     .btn-ff-yellow:hover {
-      background: linear-gradient(90deg, #ff9e00, #d97706);
+      background: linear-gradient(90deg, #a00, #550000);
       color: #fff;
     }
+
     .character {
-      text-align: center;
-    }
-    .character img {
-      max-height: 420px;
-    }
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.character img {
+  max-height: 420px;
+  display: block;
+  margin: 0 auto;
+}
+
 
     .menu-left, .menu-right {
       display: flex;
@@ -85,76 +115,131 @@ $username = $_SESSION['username'];
       gap: 12px;
     }
 
-.btn-iniciar {
-  position: absolute;
-  bottom: 30px;
-  right: 30px;
-  width: 300px;
-  padding: 18px 25px;
-  font-size: 22px;
-  text-align: center;
-  justify-content: center;
-  border-radius: 8px;
-}
-
-.progress-top {
-  position: absolute;
-      top: 20px;
-      left: 20px;
-      color: #dbf306ff;
-      font-weight: bold;
-      font-size: 18px;
-      padding: 10px 20px;
-      background: #1a1a1a15;
-      border-radius: 10px;
-      animation: progress-top 2s infinite alternate;
+    /* === BLOQUE PROFILE CARD MÁS GRANDE === */
+    .profile-card {
+      position: absolute;
+      top: 40px;
+      right: 40px;
+      width: 380px;                /* más ancho */
+      padding: 30px;
+      background: rgba(20, 20, 20, 0.15);
+      border-radius: 20px;
+      backdrop-filter: blur(8px);
+      animation: profile-glow 2s infinite alternate;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 10px;
-}
+      gap: 15px;
+      box-shadow: 0 0 20px rgba(255,0,0,0.4);
+      border: 2px solid rgba(255, 0, 0, 0.3);
+    }
 
-.progress-top meter {
-  width: 300px;
-  height: 20px;
-}
-  @keyframes progress-top {
+    .profile-card .profile-avatar img {
+      width: 120px;                /* más grande */
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #ff0000;
+      box-shadow: 0 0 20px rgba(255, 0, 0, 0.7);
+      margin-bottom: 10px;
+    }
+
+    .profile-card .profile-name {
+      font-size: 26px;             /* texto más grande */
+      color: #fff;
+      margin: 0;
+      text-shadow: 0 0 10px #ff0000;
+    }
+
+    .profile-card .profile-level {
+      font-size: 18px;
+      color: #ddd;
+      margin: -5px 0 5px 0;
+    }
+
+    .profile-card .profile-progress {
+      width: 95%;
+      height: 20px;               /* barra más gruesa */
+      border-radius: 10px;
+    }
+
+    .profile-card .btn-ff-yellow {
+      margin-top: 15px;
+      width: 100%;
+      font-size: 20px;
+      padding: 15px;
+      text-align: center;
+      justify-content: center;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(255,0,0,0.5);
+    }
+
+    @keyframes profile-glow {
       0% {
-        box-shadow: 0 0 10px #a00, 0 0 10px #ff3300, 0 0 20px #ff0000;
+        box-shadow: 0 0 10px #a00, 0 0 20px #ff3300, 0 0 40px #ff0000;
       }
       100% {
-        box-shadow: 0 0 25px #ffcc00, 0 0 10px #ff6600, 0 0 20px #a00;
+        box-shadow: 0 0 25px #ff0000, 0 0 30px #ff6600, 0 0 40px #ffcc00;
       }
+    }
+
+    .avatar-menu-izquierda {
+      position: absolute;
+      top: 40px;
+      left: 40px;
+      border-radius: 50%;
+      border: 3px solid #a00;
+      object-fit: contain;
+      box-shadow: 0 0 8px rgba(255, 0, 0, 0.7);
     }
   </style>
 </head>
 <body>
 
   <div class="menu-container">
-    <div class="progress-top">
-      <h4> <?php echo $username;?></h4>
-      <a href="" onclick="window.open ('avatar.php', '', 'width=500, height=500, toolbar=no'); void(null);" class="btn">
-        <img src="uploads/stryker.png" alt="avatar" style="height:40px; vertical-align: middle; margin-right: 10px;"></a>
-  <label>Progreso:</label>
-  <meter value="80" min="0" max="100" low="33" high="66" optimum="100"></meter>
-</div>
     <div class="menu-left">
-      <div class="btn-ff"> <img src="img/armas/kunai.png" alt="avatar"></div>
+      <a href="" onclick="window.open ('paginas/avatar.php', '', 'width=500, height=500, toolbar=no'); void(null);">
+        <img src="<?php echo $avatar['avatar_foto']?>" alt="avatar" class="avatar-menu-izquierda" style="height:80px; vertical-align: middle; margin-right: 10px;">
+      </a>
       <button class="btn-ff" onclick="window.location.href='paginas/personajes.php'"><i class="fas fa-users"></i> Personajes</button>
       <button class="btn-ff" onclick="window.location.href='paginas/estadisticas.php'"><i class="fas fa-chart-bar"></i> Estadísticas</button>
       <button class="btn-ff" onclick="window.location.href='paginas/armas.php'"> <i class="fas fa-gun"></i> Armas</button>
-
     </div>
 
     <div class="character">
-      <img src="personajes/hero1.webp" alt="personaje">
+      <?php if (!empty($imagen_personaje)): ?>
+        <img src="<?php echo $imagen_personaje; ?>" alt="personaje-seleccionado">
+      <?php else: ?>
+        <img src="personajes/hero1.webp" alt="personaje-por-defecto">
+      <?php endif; ?>
     </div>
 
     <div class="menu-right">
-      
-      <div class="btn-ff"> <img src="img/mapa1.png" alt=""></div>
+      <div class="profile-card">
+        <div class="profile-avatar"> 
+          <img src="<?php echo $usuario['imagen_url']?>" alt="avatar">
+        </div>
+        <h4 class="profile-name"><?php echo $username;?></h4>
+        <p class="profile-level">Nivel: <?php echo $usuario['nombre_nivel']?></p>
+        <meter class="profile-progress" value="<?php echo $usuario['puntos_actuales']?>" min="0" max="250" low="33" high="66" optimum="100"></meter>
+        <p class="profile-level">Puntos actuales: <?php echo $usuario['puntos_actuales']?></p>
+
+        <button class="btn-ff-yellow" onclick="window.location.href='paginas/mapas.php'"><i class="fas fa-play"></i> Iniciar</button>
+      </div>
     </div>
-        <button class="btn-ff-yellow btn-iniciar" onclick="window.location.href='/mk/paginas/mapas.php'"><i class="fas fa-play"></i> Iniciar</button>
   </div>
+
+  <script>
+    window.addEventListener('message', function(event) {
+      if (event.data.tipo === 'avatar_actualizado') {
+        const nuevoAvatar = event.data.avatar;
+        const avatarImg = document.querySelector('.avatar-menu-izquierda');
+        if (avatarImg) {
+          avatarImg.src = nuevoAvatar;
+        }
+      }
+    });
+  </script>
 
 </body>
 </html>

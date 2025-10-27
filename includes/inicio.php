@@ -16,11 +16,22 @@ if (isset($_POST['entrar'])) {
         $fila = $sql->fetch();
 
         if ($fila) {
+
+            if($fila['id_estado'] == 2){
+                echo '<script>alert("Usuario se encuentra"); location = "/mk/index.html";</script>';
+                exit;
+            }
+
             if (password_verify($contrasena, $fila['password'])) {
                 $_SESSION['documento'] = $fila['documento'];
                 $_SESSION['username'] = $fila['username'];
                 $_SESSION['password'] = $fila['password'];
                 $_SESSION['nombre'] = $fila['id_role'];
+
+
+                $fecha_actual = date("Y-m-d h:i:s");
+                $fechasql = $con->prepare("UPDATE usuario SET ultimo_login = '$fecha_actual' WHERE username = '$username'");
+                $fechasql->execute();
 
                 if ($_SESSION['nombre'] == 1) {
                     header("Location: /MK/admin/admin.php");
@@ -31,11 +42,11 @@ if (isset($_POST['entrar'])) {
                     exit();
                 }
             } else {
-                echo '<script>alert("contraseña incorrecta");location = "index.php";</script>';
+                echo '<script>alert("contraseña incorrecta");location = "/mk/index.html";</script>';
 
             }
         } else {
-            echo '<script>alert("Correo incorrecto"); location = "index.php";</script>';
+            echo '<script>alert("nombre de usuario incorrecto"); location = "/mk/index.html";</script>';
         }
     }
 }

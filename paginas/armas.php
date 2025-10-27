@@ -111,20 +111,102 @@ $resultados12 = $sql->fetchAll(PDO::FETCH_ASSOC);
         background: linear-gradient(90deg, #790d0dff, #2c080bff);
         box-shadow: 0 0 20px #ff0000;
     }
+
+
+    .card-dark {
+        position: relative;
+        background: linear-gradient(180deg, #2b2b2b, #1a1a1a);
+        border: 2px solid #660000;
+        border-radius: 8px;
+        box-shadow: 0px 0px 10px #000;
+        transition: all 0.25s ease-in-out;
+        text-align: center;
+        color: #ddd;
+    }
+
+    .card-dark:hover {
+        transform: scale(1.15);
+        border-color: #ff0000;
+        box-shadow: 0px 0px 20px #ff0000;
+    }
+    
+    .card-dark.bloqueada:hover {
+        transform: none;
+        border-color: #660000;
+        box-shadow: 0px 0px 10px #000;
+    }
+
+    .capa-bloqueo {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.85);
+        border-radius: 8px; 
+        
+        display: flex; 
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        
+        color: #ff4444;
+        text-shadow: 0 0 5px #000;
+        font-weight: bold;
+        
+        pointer-events: auto; 
+        cursor: default; 
+    }
+
+    .candado {
+        font-size: 2.5em;
+        margin-bottom: 5px;
+        line-height: 1;
+    }
+
+    .nivel-texto {
+        font-size: 0.9rem;
+        margin: 0;
+        padding: 0;
+    }
+    </style>
+</head>
     </style>
 </head>
 <body>
 
     <div class="weapon-container">
-        <h1 class="title">Selecciona tu arma</h1>
+        <h1 class="title">ARMAS</h1>
         <div class="weapon-grid">
-            <?php foreach ($resultados12 as $resultado): ?>
-                <div class="card-dark">
+            <?php 
+            $documento_usuario = $_SESSION['documento'];
+            $sql_usuario = $con->prepare("SELECT id_nivel FROM usuario WHERE documento = :doc");
+            $sql_usuario->bindParam(':doc', $documento_usuario);
+            $sql_usuario->execute();
+            $usuario = $sql_usuario->fetch(PDO::FETCH_ASSOC);
+
+            $nivel_usuario_actual = $usuario['id_nivel'] ?? 0;
+            foreach ($resultados12 as $resultado): 
+                $nivel_requerido = $resultado['id_nivel'];
+                $esta_bloqueada = $nivel_usuario_actual < $nivel_requerido;
+            ?>
+                <div class="card-dark <?php echo $esta_bloqueada ? 'bloqueada' : ''; ?>">
+                    
                     <img src="../<?php echo $resultado['imagen_url']; ?>" alt="<?php echo $resultado['nombre']; ?>">
                     <div class="card-body">
                         <h5 class="card-title"><?php echo $resultado['nombre']; ?></h5>
-                        <h5 class="card-title">Daño: <?php echo $resultado['daño']; ?></h5>
+                        <h5 class="card-title">Daño: <?php echo $resultado['daño']; ?></h5> 
                     </div>
+
+                    <?php if ($esta_bloqueada): ?>
+                        <div class="capa-bloqueo">
+                            <span class="candado"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-lock-fill" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M8 0a4 4 0 0 1 4 4v2.05a2.5 2.5 0 0 1 2 2.45v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 13.5v-5a2.5 2.5 0 0 1 2-2.45V4a4 4 0 0 1 4-4m0 1a3 3 0 0 0-3 3v2h6V4a3 3 0 0 0-3-3"/>
+</svg></span>
+                            <p class="nivel-texto">Nivel <?php echo $nivel_requerido; ?> requerido</p>
+                        </div>
+                    <?php endif; ?>
+                    
                 </div>
             <?php endforeach; ?>
         </div>
