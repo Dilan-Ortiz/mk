@@ -13,8 +13,15 @@ if(isset($_POST['registrar'])){
     $username = $_POST['username'];
     $email = $_POST['email'];
     $contrasena = $_POST["password"];
-    $avatar = 1;
+    $pin = rand(1,900);
     $rol = 2;
+    $estados = 2;
+    $nivel = 1;
+    $fecha_creacion = date("Y-m-d H:i:s");
+    $avatar = 1;
+    $personaje = 1;
+
+
 
     $sql = $con -> prepare("SELECT * FROM usuario WHERE username='$username' OR documento='$doc'");
     $sql -> execute();
@@ -23,12 +30,17 @@ if(isset($_POST['registrar'])){
     if($fila){
         echo '<script>alert ("Documento o usuario existen//");</script>';
     }else
-        if($doc=="" || $username=="" || $email=="" || $contrasena=="" || $avatar=="" || $rol=="")
+        if($doc=="" || $username=="" || $email=="" || $contrasena=="" 
+        || $pin=="" || $rol=="" || $estados=="" || $nivel=="" || $fecha_creacion=="" || 
+        $avatar=="" || $personaje=="")
         {
             echo '<script>alert ("EXISTEN DATOS VACIOS");</script>';
     }else{
         $hashing=password_hash($contrasena, PASSWORD_DEFAULT,array("password"=>12));
-        $insertSQL = $con ->prepare(query: "INSERT INTO `usuario` (`documento`, `username`, `email`, `password`, `id_avatar`, `id_role`) VALUES ('$doc', '$username', '$email', '$hashing', '$avatar', '$rol');");
+        $insertSQL = $con ->prepare(query: "INSERT INTO `usuario` (`documento`, `username`, `email`, `password`, 
+        `pin_verify`, `id_role`, `id_estado`,`id_nivel`, `fecha_creacion`, `id_avatar`, `id_personaje`) 
+        VALUES ('$doc', '$username', '$email', '$hashing', '$pin', '$rol', '$estados', '$nivel', 
+        '$fecha_creacion', '$avatar', '$personaje');");
         $insertSQL->execute();
         echo '<script>alert ("Registro exitoso");</script>';
     }

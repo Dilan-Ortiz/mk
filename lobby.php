@@ -221,7 +221,7 @@ if (!empty($usuario['id_personaje'])) {
         </div>
         <h4 class="profile-name"><?php echo $username;?></h4>
         <p class="profile-level">Nivel: <?php echo $usuario['nombre_nivel']?></p>
-        <meter class="profile-progress" value="<?php echo $usuario['puntos_actuales']?>" min="0" max="250" low="33" high="66" optimum="100"></meter>
+        <meter class="profile-progress" id="barraProgreso" value="<?php echo $usuario['puntos_actuales']?>" low="33" high="66" optimum="100"></meter>
         <p class="profile-level">Puntos actuales: <?php echo $usuario['puntos_actuales']?></p>
 
         <button class="btn-ff-yellow" onclick="window.location.href='paginas/mapas.php'"><i class="fas fa-play"></i> Iniciar</button>
@@ -240,6 +240,38 @@ if (!empty($usuario['id_personaje'])) {
       }
     });
   </script>
+  <script>
+    function actualizarbarra(puntos, nivel){
+      const barra = document.getElementById("barraProgreso");
 
+      switch(nivel){
+        case 1:
+          barra.max=500;
+          barra.min=0;
+          break
+        case 2:
+          barra.max=750;
+          barra.min=501;
+          break;
+        case 3:
+          barra.max=1000;
+          barra.min=751;
+          break;
+        case 4:
+          barra.max=1250;
+          barra.min=1001;
+          break;
+          case 5:
+          barra.max=1500;
+          barra.min=1251;
+          break;
+          default:
+            barra.min = 0;
+            barra.max = 100;
+      }
+    }
+  actualizarbarra(<?php echo $usuario['puntos_actuales']; ?>, <?php echo $usuario['id_nivel']; ?>);
+
+  </script>
 </body>
 </html>

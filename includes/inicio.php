@@ -18,7 +18,7 @@ if (isset($_POST['entrar'])) {
         if ($fila) {
 
             if($fila['id_estado'] == 2){
-                echo '<script>alert("Usuario se encuentra"); location = "/mk/index.html";</script>';
+                echo '<script>alert("Usuario se encuentra bloqueado, espere que el administrador active su cuenta"); location = "/mk/index.html";</script>';
                 exit;
             }
 

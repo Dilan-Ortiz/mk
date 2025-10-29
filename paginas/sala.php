@@ -1,41 +1,42 @@
 <?php
 session_start();
+require_once '../config/database.php';
 
-// 🔹 Conexión directa a la base de datos
-$conexion = mysqli_connect("localhost", "root", "", "mk");
+$db = new Database();
+$con = $db->conectar();
 
-// Verificamos la conexión
-if (!$conexion) {
-    die("❌ Error de conexión a la base de datos: " . mysqli_connect_error());
-}
-
-// Aseguramos que haya un usuario logueado
 if (!isset($_SESSION['documento'])) {
     header("Location: login.php");
     exit;
 }
 
 $documento = $_SESSION['documento'];
+$consulta_usuario = $con->prepare("SELECT id_nivel FROM usuarios WHERE documento = ?");
+$consulta_usuario->execute([$documento]);
+$conusu = $consulta_usuario->fetch(PDO::FETCH_ASSOC);
 
-// Verificamos que se haya recibido un mundo
+
+
 if (!isset($_GET['mundo'])) {
-    die("⚠️ No se seleccionó ningún mundo.");
+    die("No se seleccionó ningún mundo.");
 }
 
 $id_mundo = intval($_GET['mundo']);
 
 
-$query_mundo = mysqli_query($conexion, "SELECT * FROM mundos WHERE id_mundo = $id_mundo");
-if (mysqli_num_rows($query_mundo) == 0) {
+$sql_mundo = $con->prepare("SELECT * FROM mundos WHERE id_mundo = ?");
+$sql_mundo->execute([$id_mundo]);
+
+if ($sql_mundo->rowCount() === 0) {
     die("El mundo seleccionado no existe en la base de datos.");
 }
-$mundo = mysqli_fetch_assoc($query_mundo);
 
-$query_salas = mysqli_query($conexion, "
-    SELECT s.*
-    FROM salas s
-    WHERE s.id_mundo = $id_mundo AND s.estado = 'abierta'
-");
+$mundo = $sql_mundo->fetch(PDO::FETCH_ASSOC);
+
+$sql_salas = $con->prepare("SELECT s.* FROM salas s WHERE s.id_mundo = ? AND s.estado = 'abierta'");
+$sql_salas->execute([$id_mundo]);
+
+$salas = $sql_salas->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -126,14 +127,13 @@ $query_salas = mysqli_query($conexion, "
         border-radius: 10px;
     }
 
-    
     .container {
         background: rgba(0, 0, 0, 0.4);
         border-radius: 20px;
         padding: 40px;
         box-shadow: 0 0 40px rgba(0,0,0,0.7);
     }
-</style>
+    </style>
 
 </head>
 <body>
@@ -144,38 +144,35 @@ $query_salas = mysqli_query($conexion, "
 
     <div class="text-center mb-4">
         <a href="../crear_sala.php?mundo=<?= $id_mundo ?>" class="btn btn-danger btn-lg"> Crear Nueva Sala</a>
-
     </div>
 
     <div class="row justify-content-center">
-        <?php if (mysqli_num_rows($query_salas) > 0): ?>
-            <?php while ($sala = mysqli_fetch_assoc($query_salas)): ?>
-    <div class="col-md-4 mb-4">
-        <div class="card bg-dark text-light">
-            <div class="card-body text-center">
-                <h4 class="card-title"><?= htmlspecialchars($sala['nombre_sala']) ?></h4>
+        <?php if (count($salas) > 0): ?>
+            <?php foreach ($salas as $sala): ?>
+                <div class="col-md-4 mb-4">
+                    <div class="card bg-dark text-light">
+                        <div class="card-body text-center">
+                            <h4 class="card-title"><?= htmlspecialchars($sala['nombre_sala']) ?></h4>
 
-                <?php
-                    $jugadores_actuales = isset($sala['jugadores_actuales']) ? intval($sala['jugadores_actuales']) : 0;
-                    $max_mundo = isset($mundo['max_jugadores']) ? intval($mundo['max_jugadores']) : null;
-                ?>
+                            <?php
+                                $jugadores_actuales = isset($sala['jugadores_actuales']) ? intval($sala['jugadores_actuales']) : 0;
+                                $max_mundo = isset($mundo['max_jugadores']) ? intval($mundo['max_jugadores']) : null;
+                            ?>
 
-                <p class="card-text">
-                    Jugadores: <?= htmlspecialchars($jugadores_actuales) ?>/<?= $max_mundo !== null ? htmlspecialchars($max_mundo) : 'N/A' ?><br>
-                    Estado: <?= htmlspecialchars(ucfirst($sala['estado'])) ?>
-                </p>
+                            <p class="card-text">
+                                Jugadores: <?= htmlspecialchars($jugadores_actuales) ?>/<?= $max_mundo !== null ? htmlspecialchars($max_mundo) : 'N/A' ?><br>
+                                Estado: <?= htmlspecialchars(ucfirst($sala['estado'])) ?>
+                            </p>
 
-                <?php if ($max_mundo === null || $jugadores_actuales < $max_mundo): ?>
-                    <a href="../unirse_sala.php?sala=<?= $sala['id_sala'] ?>" class="btn btn-danger">Unirse</a>
-                <?php else: ?>
-                    <button class="btn btn-secondary" disabled>Lleno</button>
-                <?php endif; ?>
-
-            </div>
-        </div>
-    </div>
-<?php endwhile; ?>
-
+                            <?php if ($max_mundo === null || $jugadores_actuales < $max_mundo): ?>
+                                <a href="../unirse_sala.php?sala=<?= $sala['id_sala'] ?>" class="btn btn-danger">Unirse</a>
+                            <?php else: ?>
+                                <button class="btn btn-secondary" disabled>Lleno</button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         <?php else: ?>
             <h4 class="text-center text-warning">No hay salas disponibles</h4>
         <?php endif; ?>
