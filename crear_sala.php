@@ -1,30 +1,37 @@
 <?php
 session_start();
+require_once("config/database.php"); // Usa tu clase Database
 
+// Conectar a la base de datos con PDO
+$db = new Database();
+$con = $db->conectar();
 
-$conexion = mysqli_connect("localhost", "root", "", "mk");
-if (!$conexion) {
-    die("Error de conexión: " . mysqli_connect_error());
-}
-
-
+// Verificar que se reciba el parámetro 'mundo'
 if (!isset($_GET['mundo'])) {
     die("No se seleccionó ningún mundo.");
 }
+
 $id_mundo = intval($_GET['mundo']);
 
+// Si se envió el formulario
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $nombre = mysqli_real_escape_string($conexion, $_POST['nombre']);
+    $nombre = trim($_POST['nombre']);
     $max_jugadores = intval($_POST['max_jugadores']);
 
-    
-    $sql = "INSERT INTO salas (id_mundo, nombre_sala, estado, max_jugadores)
-            VALUES ($id_mundo, '$nombre', 'abierta', $max_jugadores)";
-    if (mysqli_query($conexion, $sql)) {
+    try {
+        // Insertar nueva sala usando consulta preparada
+        $sql = $con->prepare("
+            INSERT INTO salas (id_mundo, nombre_sala, estado, max_jugadores)
+            VALUES (?, ?, 'abierta', ?)
+        ");
+        $sql->execute([$id_mundo, $nombre, $max_jugadores]);
+
+        // Redirigir al listado o vista de la sala
         header("Location: paginas/sala.php?mundo=$id_mundo");
         exit;
-    } else {
-        echo "Error al crear la sala: " . mysqli_error($conexion);
+
+    } catch (PDOException $e) {
+        echo "Error al crear la sala: " . $e->getMessage();
     }
 }
 ?>

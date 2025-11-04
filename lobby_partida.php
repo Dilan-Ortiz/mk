@@ -1,44 +1,82 @@
 <?php
 session_start();
-
-$conexion = mysqli_connect("localhost", "root", "", "mk");
-if (!$conexion) {
-    die("Error de conexión: " . mysqli_connect_error());
-}
+require_once 'config/database.php';
+$db = new Database();
+$con = $db->conectar();
 
 if (!isset($_SESSION['documento'])) {
     header("Location: login.php");
     exit;
 }
+
 $documento = $_SESSION['documento'];
 
+// ✅ Validar sala seleccionada
 if (!isset($_GET['sala'])) {
     die("No se seleccionó ninguna sala.");
 }
+
 $id_sala = intval($_GET['sala']);
 
+// ✅ Obtener datos de la sala
+$sql_sala = $con->prepare("SELECT * FROM salas WHERE id_sala = :id_sala");
+$sql_sala->bindParam(':id_sala', $id_sala, PDO::PARAM_INT);
+$sql_sala->execute();
+$sala = $sql_sala->fetch(PDO::FETCH_ASSOC);
 
-$sql_sala = mysqli_query($conexion, "SELECT * FROM salas WHERE id_sala = $id_sala");
-if (mysqli_num_rows($sql_sala) == 0) {
+if (!$sala) {
     die("La sala no existe.");
 }
-$sala = mysqli_fetch_assoc($sql_sala);
 
+// ✅ Verificar si el usuario pertenece a la sala
+$sql_check = $con->prepare("SELECT * FROM sala_usuarios WHERE documento = :documento AND id_sala = :id_sala");
+$sql_check->bindParam(':documento', $documento);
+$sql_check->bindParam(':id_sala', $id_sala, PDO::PARAM_INT);
+$sql_check->execute();
 
-$check = mysqli_query($conexion, "SELECT * FROM sala_usuarios WHERE documento='$documento' AND id_sala=$id_sala");
-if (mysqli_num_rows($check) == 0) {
+if ($sql_check->rowCount() == 0) {
     die("No perteneces a esta sala.");
 }
 
+// ✅ Validar que los jugadores sean del mismo nivel
+$sql_nivel_existente = $con->prepare("
+    SELECT u.id_nivel 
+    FROM sala_usuarios su
+    INNER JOIN usuario u ON su.documento = u.documento 
+    WHERE su.id_sala = :id_sala 
+    LIMIT 1
+");
+$sql_nivel_existente->bindParam(':id_sala', $id_sala, PDO::PARAM_INT);
+$sql_nivel_existente->execute();
+$nivel_existente = $sql_nivel_existente->fetch(PDO::FETCH_ASSOC);
 
-$query_jugadores = "
-SELECT u.username, a.avatar_foto
-FROM sala_usuarios su
-JOIN usuario u ON su.documento = u.documento
-JOIN avatar a ON u.id_avatar = a.id_avatar
-WHERE su.id_sala = $id_sala
-";
-$resultado_jugadores = mysqli_query($conexion, $query_jugadores);
+if ($nivel_existente) {
+    $nivel_jugadores = $nivel_existente['id_nivel'];
+
+    $sql_nivel_usuario = $con->prepare("SELECT id_nivel FROM usuario WHERE documento = :documento");
+    $sql_nivel_usuario->bindParam(':documento', $documento);
+    $sql_nivel_usuario->execute();
+    $nivel_usuario = $sql_nivel_usuario->fetch(PDO::FETCH_ASSOC);
+
+    if ($nivel_usuario && $nivel_usuario['id_nivel'] != $nivel_jugadores) {
+        die("<script>
+            alert('No puedes entrar. Los jugadores de esta sala son de otro nivel.');
+            window.location.href = 'seleccionar_sala.php';
+        </script>");
+    }
+}
+
+// ✅ Consultar jugadores y su estado “listo”
+$sql_jugadores = $con->prepare("
+    SELECT u.username, a.avatar_foto, su.listo, su.documento
+    FROM sala_usuarios su
+    INNER JOIN usuario u ON su.documento = u.documento
+    INNER JOIN avatar a ON u.id_avatar = a.id_avatar
+    WHERE su.id_sala = :id_sala
+");
+$sql_jugadores->bindParam(':id_sala', $id_sala, PDO::PARAM_INT);
+$sql_jugadores->execute();
+$jugadores = $sql_jugadores->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -47,6 +85,8 @@ $resultado_jugadores = mysqli_query($conexion, $query_jugadores);
 <meta charset="UTF-8">
 <title>Lobby - <?= htmlspecialchars($sala['nombre_sala']) ?></title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <style>
 body {
   margin: 0;
@@ -71,8 +111,7 @@ body {
   text-align: center;
 }
 
-
-.lobby-container h1 {
+h1 {
   color: #ff0000ff;
   font-size: 2.5rem;
   text-transform: uppercase;
@@ -81,12 +120,7 @@ body {
   text-shadow: 0 0 20px #ff000dff;
 }
 
-.lobby-container p {
-  color: #ddd;
-  font-size: 1rem;
-  margin-bottom: 40px;
-}
-
+p { color: #ddd; }
 
 .avatar-grid {
   display: flex;
@@ -122,26 +156,34 @@ body {
   color: #fff;
 }
 
-
-.btn-iniciar {
-  background: linear-gradient(90deg, #ff004cff, #ff0077ff);
-  border: none;
-  font-size: 1.2rem;
-  padding: 14px 40px;
-  border-radius: 10px;
-  margin-top: 45px;
-  color: white;
-  cursor: pointer;
-  transition: 0.3s;
-  box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+.estado-listo {
+  font-size: 0.9rem;
+  color: #0f0;
 }
 
-.btn-iniciar:hover {
+.estado-no {
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.btn-listo {
+  background: linear-gradient(90deg, #ff004cff, #ff0077ff);
+  border: none;
+  font-size: 1.1rem;
+  padding: 10px 30px;
+  border-radius: 10px;
+  margin-top: 25px;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+  transition: 0.3s;
+}
+
+.btn-listo:hover {
   background: linear-gradient(90deg, #ff0040ff, #ff0000ff);
   transform: scale(1.08);
   box-shadow: 0 0 25px rgba(255, 0, 0, 0.7);
 }
-
 
 .btn-salir {
   background: linear-gradient(90deg, #444, #222);
@@ -161,41 +203,56 @@ body {
 }
 </style>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-setInterval(() => {
-    $("#jugadores").load("lobby_jugadores.php?sala=<?= $id_sala ?>");
-}, 3000);
+// ✅ Actualiza el lobby periódicamente y verifica si debe iniciar
+function actualizarLobby() {
+  $("#jugadores").load("lobby_jugadores.php?sala=<?= $id_sala ?>", function () {
+    $.get("check_inicio.php?sala=<?= $id_sala ?>", function (data) {
+      if (data.trim() === "start") {
+        window.location.href = "iniciar_partida.php?id_sala=<?= $id_sala ?>";
+      }
+    });
+  });
+}
+
+// ✅ Marcar jugador como listo
+function marcarListo() {
+  $.post("actualizar_estado_listo.php", { id_sala: <?= $id_sala ?> }, function() {
+    actualizarLobby();
+  });
+}
+
+// ✅ Refrescar cada 3 segundos
+setInterval(actualizarLobby, 3000);
 </script>
 </head>
+
 <body>
-
 <div class="lobby-container">
-    <h1 class="text-danger mb-3"><?= htmlspecialchars($sala['nombre_sala']) ?></h1>
-    <p>Listos para la guerra... que gane el mejor</p>
+  <h1 class="text-danger mb-3"><?= htmlspecialchars($sala['nombre_sala']) ?></h1>
+  <p>Listos para la guerra... que gane el mejor</p>
 
-    <div id="jugadores" class="avatar-grid">
-        <?php while ($jugador = mysqli_fetch_assoc($resultado_jugadores)): ?>
-            <div class="avatar-card">
-                <img src="../<?= htmlspecialchars($jugador['avatar_foto']) ?>" alt="Avatar">
-                <span><?= htmlspecialchars($jugador['username']) ?></span>
-            </div>
-        <?php endwhile; ?>
-    </div>
+  <div id="jugadores" class="avatar-grid">
+    <?php foreach ($jugadores as $jugador): ?>
+      <div class="avatar-card">
+        <img src="../<?= htmlspecialchars($jugador['avatar_foto']) ?>" alt="Avatar">
+        <span><?= htmlspecialchars($jugador['username']) ?></span>
+        <?php if ($jugador['listo']): ?>
+          <div class="estado-listo">Listo</div>
+        <?php else: ?>
+          <div class="estado-no">Esperando...</div>
+        <?php endif; ?>
+      </div>
+    <?php endforeach; ?>
+  </div>
 
-    
-    <form action="iniciar_partida.php" method="POST">
+  <button class="btn-listo" onclick="marcarListo()">Estoy Listo</button>
+
+  <form action="salir_sala.php" method="POST">
     <input type="hidden" name="id_sala" value="<?= $id_sala ?>">
-    <button class="btn-iniciar">Iniciar Partida</button>
-</form>
-
- 
-    <form action="salir_sala.php" method="POST">
-        <input type="hidden" name="id_sala" value="<?= $id_sala ?>">
-        <input type="hidden" name="id_mundo" value="<?= $sala['id_mundo'] ?>">
-        <button class="btn-salir"> Abandonar partida</button>
-    </form>
+    <input type="hidden" name="id_mundo" value="<?= $sala['id_mundo'] ?>">
+    <button class="btn-salir">Abandonar partida</button>
+  </form>
 </div>
-
 </body>
 </html>

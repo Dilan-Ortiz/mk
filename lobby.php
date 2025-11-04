@@ -209,8 +209,6 @@ if (!empty($usuario['id_personaje'])) {
     <div class="character">
       <?php if (!empty($imagen_personaje)): ?>
         <img src="<?php echo $imagen_personaje; ?>" alt="personaje-seleccionado">
-      <?php else: ?>
-        <img src="personajes/hero1.webp" alt="personaje-por-defecto">
       <?php endif; ?>
     </div>
 

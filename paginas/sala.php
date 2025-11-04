@@ -11,19 +11,15 @@ if (!isset($_SESSION['documento'])) {
 }
 
 $documento = $_SESSION['documento'];
-$consulta_usuario = $con->prepare("SELECT id_nivel FROM usuarios WHERE documento = ?");
-$consulta_usuario->execute([$documento]);
-$conusu = $consulta_usuario->fetch(PDO::FETCH_ASSOC);
 
-
-
+// Verificamos que se haya recibido un mundo
 if (!isset($_GET['mundo'])) {
-    die("No se seleccionó ningún mundo.");
+    die("⚠️ No se seleccionó ningún mundo.");
 }
 
 $id_mundo = intval($_GET['mundo']);
 
-
+// 🔹 Consultar información del mundo
 $sql_mundo = $con->prepare("SELECT * FROM mundos WHERE id_mundo = ?");
 $sql_mundo->execute([$id_mundo]);
 
@@ -33,8 +29,14 @@ if ($sql_mundo->rowCount() === 0) {
 
 $mundo = $sql_mundo->fetch(PDO::FETCH_ASSOC);
 
-$sql_salas = $con->prepare("SELECT s.* FROM salas s WHERE s.id_mundo = ? AND s.estado = 'abierta'");
-$sql_salas->execute([$id_mundo]);
+// 🔹 Consultar salas abiertas del mundo
+$sql_salas = $con->prepare("
+    SELECT s.*
+    FROM salas s
+    WHERE s.id_mundo = :id_mundo AND s.estado = 'abierta'
+");
+$sql_salas->bindParam(':id_mundo', $id_mundo, PDO::PARAM_INT);
+$sql_salas->execute();
 
 $salas = $sql_salas->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -165,7 +167,7 @@ $salas = $sql_salas->fetchAll(PDO::FETCH_ASSOC);
                             </p>
 
                             <?php if ($max_mundo === null || $jugadores_actuales < $max_mundo): ?>
-                                <a href="../unirse_sala.php?sala=<?= $sala['id_sala'] ?>" class="btn btn-danger">Unirse</a>
+                                <a href="../unirse_sala.php?sala=<?= $sala['id_sala'] ?>&join=1" class="btn btn-danger">Unirse</a>
                             <?php else: ?>
                                 <button class="btn btn-secondary" disabled>Lleno</button>
                             <?php endif; ?>

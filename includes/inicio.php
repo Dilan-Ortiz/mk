@@ -26,18 +26,19 @@ if (isset($_POST['entrar'])) {
                 $_SESSION['documento'] = $fila['documento'];
                 $_SESSION['username'] = $fila['username'];
                 $_SESSION['password'] = $fila['password'];
-                $_SESSION['nombre'] = $fila['id_role'];
+                $_SESSION['id_role'] = $fila['id_role'];
+                $_SESSION['id_nivel'] = $fila['id_nivel'];
 
 
                 $fecha_actual = date("Y-m-d h:i:s");
                 $fechasql = $con->prepare("UPDATE usuario SET ultimo_login = '$fecha_actual' WHERE username = '$username'");
                 $fechasql->execute();
 
-                if ($_SESSION['nombre'] == 1) {
+                if ($_SESSION['id_role'] == 1) {
                     header("Location: /MK/admin/admin.php");
                     exit();
                 }
-                if ($_SESSION['nombre'] == 2) {
+                if ($_SESSION['id_role'] == 2) {
                     header("Location: ../lobby.php");
                     exit();
                 }
