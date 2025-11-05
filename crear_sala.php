@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once("config/database.php"); // Usa tu clase Database
+require_once("config/database.php");
 
 // Conectar a la base de datos con PDO
 $db = new Database();

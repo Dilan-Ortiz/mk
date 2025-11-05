@@ -11,14 +11,14 @@ if (!isset($_SESSION['documento'])) {
 
 $documento = $_SESSION['documento'];
 
-// ✅ Validar sala seleccionada
+// Validar sala seleccionada
 if (!isset($_GET['sala'])) {
     die("No se seleccionó ninguna sala.");
 }
 
 $id_sala = intval($_GET['sala']);
 
-// ✅ Obtener datos de la sala
+// Obtener datos de la sala
 $sql_sala = $con->prepare("SELECT * FROM salas WHERE id_sala = :id_sala");
 $sql_sala->bindParam(':id_sala', $id_sala, PDO::PARAM_INT);
 $sql_sala->execute();
@@ -28,7 +28,7 @@ if (!$sala) {
     die("La sala no existe.");
 }
 
-// ✅ Verificar si el usuario pertenece a la sala
+// Verificar si el usuario pertenece a la sala
 $sql_check = $con->prepare("SELECT * FROM sala_usuarios WHERE documento = :documento AND id_sala = :id_sala");
 $sql_check->bindParam(':documento', $documento);
 $sql_check->bindParam(':id_sala', $id_sala, PDO::PARAM_INT);
@@ -38,7 +38,7 @@ if ($sql_check->rowCount() == 0) {
     die("No perteneces a esta sala.");
 }
 
-// ✅ Validar que los jugadores sean del mismo nivel
+// Validar que los jugadores sean del mismo nivel
 $sql_nivel_existente = $con->prepare("
     SELECT u.id_nivel 
     FROM sala_usuarios su
@@ -66,7 +66,7 @@ if ($nivel_existente) {
     }
 }
 
-// ✅ Consultar jugadores y su estado “listo”
+// Consultar jugadores y su estado “listo”
 $sql_jugadores = $con->prepare("
     SELECT u.username, a.avatar_foto, su.listo, su.documento
     FROM sala_usuarios su
@@ -204,7 +204,7 @@ p { color: #ddd; }
 </style>
 
 <script>
-// ✅ Actualiza el lobby periódicamente y verifica si debe iniciar
+// Actualiza el lobby periódicamente y verifica si debe iniciar
 function actualizarLobby() {
   $("#jugadores").load("lobby_jugadores.php?sala=<?= $id_sala ?>", function () {
     $.get("check_inicio.php?sala=<?= $id_sala ?>", function (data) {
@@ -215,14 +215,14 @@ function actualizarLobby() {
   });
 }
 
-// ✅ Marcar jugador como listo
+// Marcar jugador como listo
 function marcarListo() {
   $.post("actualizar_estado_listo.php", { id_sala: <?= $id_sala ?> }, function() {
     actualizarLobby();
   });
 }
 
-// ✅ Refrescar cada 3 segundos
+// Refrescar cada 3 segundos
 setInterval(actualizarLobby, 3000);
 </script>
 </head>

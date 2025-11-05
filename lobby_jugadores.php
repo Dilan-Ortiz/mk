@@ -5,7 +5,7 @@ $con = $db->conectar();
 
 $id_sala = intval($_GET['sala']);
 
-// 🔹 Consultar jugadores de la sala con su avatar y estado "listo"
+// Consultar jugadores de la sala con su avatar y estado "listo"
 $sql = $con->prepare("
     SELECT 
         u.username, 
@@ -21,7 +21,7 @@ $sql->execute();
 
 $jugadores = $sql->fetchAll(PDO::FETCH_ASSOC);
 
-// 🔹 Mostrar cada jugador con su imagen y estado
+// Mostrar cada jugador con su imagen y estado
 foreach ($jugadores as $jugador) {
     echo '<div class="avatar-card">';
     echo '<img src="/MK/' . htmlspecialchars($jugador['avatar_foto']) . '?v=' . time() . '" alt="Avatar">';

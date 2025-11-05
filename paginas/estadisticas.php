@@ -12,21 +12,11 @@ $con = $db->conectar();
 
 $documento_usuario = $_SESSION['documento'];
 
-$sql = $con->prepare("
-SELECT 
-    n.nombre AS nivel,
-    u.puntos_actuales,
-    a.avatar_foto AS avatar,
-    ar.nombre AS arma_utilizada,
-    ar.cantidad_balas,
-    (u.puntos_actuales - n.puntos_requeridos) AS puntos_ganados
-FROM usuario u
-LEFT JOIN niveles n ON u.id_nivel = n.id_nivel
-LEFT JOIN avatar a ON u.id_avatar = a.id_avatar
-LEFT JOIN armas ar ON ar.id_nivel = u.id_nivel
-WHERE u.documento = :doc
-ORDER BY u.puntos_actuales DESC
-");
+$sql = $con->prepare("SELECT n.nombre AS nivel, u.puntos_actuales, a.avatar_foto AS avatar,
+    ar.nombre AS arma_utilizada, ar.cantidad_balas, (u.puntos_actuales - n.puntos_requeridos) AS puntos_ganados
+FROM usuario u LEFT JOIN niveles n ON u.id_nivel = n.id_nivel LEFT JOIN avatar a ON u.id_avatar = a.id_avatar
+LEFT JOIN armas ar ON ar.id_nivel = u.id_nivel WHERE u.documento = :doc
+ORDER BY u.puntos_actuales DESC");
 $sql->bindParam(':doc', $documento_usuario);
 $sql->execute();
 $resultados = $sql->fetchAll(PDO::FETCH_ASSOC);

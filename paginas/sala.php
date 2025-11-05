@@ -19,7 +19,7 @@ if (!isset($_GET['mundo'])) {
 
 $id_mundo = intval($_GET['mundo']);
 
-// 🔹 Consultar información del mundo
+// Consultar información del mundo
 $sql_mundo = $con->prepare("SELECT * FROM mundos WHERE id_mundo = ?");
 $sql_mundo->execute([$id_mundo]);
 
@@ -29,7 +29,7 @@ if ($sql_mundo->rowCount() === 0) {
 
 $mundo = $sql_mundo->fetch(PDO::FETCH_ASSOC);
 
-// 🔹 Consultar salas abiertas del mundo
+// Consultar salas abiertas del mundo
 $sql_salas = $con->prepare("
     SELECT s.*
     FROM salas s

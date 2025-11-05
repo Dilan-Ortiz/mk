@@ -7,11 +7,8 @@ $con = $db->conectar();
 $username = $_SESSION['username'];
 
 // Obtener datos del usuario
-$sqlusuario = $con->prepare("SELECT 
-  u.puntos_actuales, u.id_nivel, n.nombre AS nombre_nivel, n.puntos_requeridos, n.imagen_url, id_personaje
-FROM usuario u 
-INNER JOIN niveles n ON u.id_nivel = n.id_nivel 
-WHERE u.username = :username");
+$sqlusuario = $con->prepare("SELECT u.puntos_actuales, u.id_nivel, n.nombre AS nombre_nivel, n.puntos_requeridos, n.imagen_url, id_personaje
+FROM usuario u INNER JOIN niveles n ON u.id_nivel = n.id_nivel WHERE u.username = :username");
 $sqlusuario->bindParam(':username', $username);
 $sqlusuario->execute();
 $usuario = $sqlusuario->fetch(PDO::FETCH_ASSOC);
@@ -115,12 +112,11 @@ if (!empty($usuario['id_personaje'])) {
       gap: 12px;
     }
 
-    /* === BLOQUE PROFILE CARD MÁS GRANDE === */
     .profile-card {
       position: absolute;
       top: 40px;
       right: 40px;
-      width: 380px;                /* más ancho */
+      width: 380px;      
       padding: 30px;
       background: rgba(20, 20, 20, 0.15);
       border-radius: 20px;
@@ -135,7 +131,7 @@ if (!empty($usuario['id_personaje'])) {
     }
 
     .profile-card .profile-avatar img {
-      width: 120px;                /* más grande */
+      width: 120px; 
       height: 120px;
       border-radius: 50%;
       object-fit: cover;
@@ -145,7 +141,7 @@ if (!empty($usuario['id_personaje'])) {
     }
 
     .profile-card .profile-name {
-      font-size: 26px;             /* texto más grande */
+      font-size: 26px;
       color: #fff;
       margin: 0;
       text-shadow: 0 0 10px #ff0000;
@@ -159,7 +155,7 @@ if (!empty($usuario['id_personaje'])) {
 
     .profile-card .profile-progress {
       width: 95%;
-      height: 20px;               /* barra más gruesa */
+      height: 20px;
       border-radius: 10px;
     }
 

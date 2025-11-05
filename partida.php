@@ -32,7 +32,7 @@ $inicio = strtotime($partida['inicio']);
 $duracion = $partida['duracion_segundos'] ?: 300;
 $tiempo_restante = max(0, $duracion - (time() - $inicio));
 
-// 🔹 AJAX (actualiza vidas/puntos en tiempo real)
+// AJAX (actualiza vidas/puntos en tiempo real)
 if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     $sql = $conexion->prepare("
         SELECT up.documento, u.username, a.avatar_foto, up.vida_restante, up.puntos_acumulados, up.eliminado
@@ -116,7 +116,7 @@ body{background:radial-gradient(#111,#000);color:#fff;font-family:Poppins,sans-s
 <script>
 let tiempo = <?= $tiempo_restante ?>;
 
-// 🔹 Refrescar estado de jugadores cada segundo
+// Refrescar estado de jugadores cada segundo
 function refreshStatus(){
   $.get("partida.php?id_partida=<?= $id_partida ?>&ajax=1", function(data){
     if(data.trim() === "FINALIZADA"){
@@ -129,7 +129,7 @@ function refreshStatus(){
 
 setInterval(refreshStatus, 1000);
 
-// 🔹 Temporizador visual
+// Temporizador visual
 function actualizarTimer() {
   if (tiempo <= 0) {
     clearInterval(timerInterval);
@@ -192,7 +192,7 @@ const timerInterval = setInterval(actualizarTimer, 1000);
 </div>
 
 <script>
-// 🔹 Enviar ataque por AJAX
+// Enviar ataque por AJAX
 $("#formAtaque").on("submit", function(e){
   e.preventDefault();
   $.post("registrar_ataque.php", $(this).serialize(), function(resp){

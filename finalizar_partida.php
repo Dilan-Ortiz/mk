@@ -13,31 +13,21 @@ $documento = $_SESSION['documento'];
 $id_partida = intval($_GET['id_partida'] ?? 0);
 if ($id_partida <= 0) die("ID de partida inválido.");
 
-// 🔹 Obtener datos de la partida
+// Obtener datos de la partida
 $sql = $conexion->prepare("SELECT * FROM partidas WHERE id_partida = ? LIMIT 1");
 $sql->execute([$id_partida]);
 $partida = $sql->fetch(PDO::FETCH_ASSOC);
 if (!$partida) die("Partida no encontrada.");
 
-// 🔹 Obtener estadísticas desde usuario_partida
-$sql = $conexion->prepare("
-    SELECT 
-        u.username,
-        a.avatar_foto,
-        up.puntos_acumulados,
-        up.vida_restante,
-        up.eliminado,
-        COALESCE(up.eliminaciones, 0) AS eliminaciones
-    FROM usuario_partida up
-    JOIN usuario u ON up.documento = u.documento
-    LEFT JOIN avatar a ON u.id_avatar = a.id_avatar
-    WHERE up.id_partida = ?
-    ORDER BY up.puntos_acumulados DESC
-");
+// Obtener estadísticas desde usuario_partida
+$sql = $conexion->prepare("SELECT u.username, a.avatar_foto,up.puntos_acumulados,up.vida_restante,
+      up.eliminado, COALESCE(up.eliminaciones, 0) AS eliminaciones FROM usuario_partida up
+    JOIN usuario u ON up.documento = u.documento LEFT JOIN avatar a ON u.id_avatar = a.id_avatar
+    WHERE up.id_partida = ? ORDER BY up.puntos_acumulados DESC");
 $sql->execute([$id_partida]);
 $jugadores = $sql->fetchAll(PDO::FETCH_ASSOC);
 
-// 🔹 Determinar ganador (el de más puntos o el único vivo)
+// Determinar ganador (el de más puntos o el único vivo)
 $ganador = null;
 foreach ($jugadores as $j) {
     if (!$j['eliminado']) {
@@ -46,17 +36,12 @@ foreach ($jugadores as $j) {
     }
 }
 if (!$ganador && !empty($jugadores)) {
-    $ganador = $jugadores[0]; // fallback por puntos
+    $ganador = $jugadores[0];
 }
 
-// 🔹 Actualizar estado de la partida
-$sql = $conexion->prepare("
-    UPDATE partidas 
-    SET estado = 'finalizada', 
-        fin = NOW(), 
-        resultado = :resultado
-    WHERE id_partida = :id
-");
+// Actualizar estado de la partida
+$sql = $conexion->prepare("UPDATE partidas 
+    SET estado = 'finalizada', fin = NOW(), resultado = :resultado WHERE id_partida = :id");
 $sql->execute([
     ':resultado' => $ganador ? $ganador['username'] : 'Sin ganador',
     ':id' => $id_partida

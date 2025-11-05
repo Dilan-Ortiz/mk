@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once("../config/database.php"); // Ajusta la ruta según tu estructura
+require_once("config/database.php");
 
 // Conexión con PDO
 $db = new Database();
@@ -24,11 +24,11 @@ try {
     // Iniciar transacción por seguridad
     $con->beginTransaction();
 
-    // 1️⃣ Eliminar usuario de la sala
+    // Eliminar usuario de la sala
     $sqlDeleteUsuario = $con->prepare("DELETE FROM sala_usuarios WHERE id_sala = ? AND documento = ?");
     $sqlDeleteUsuario->execute([$id_sala, $documento]);
 
-    // 2️⃣ Restar 1 al contador de jugadores
+    // Restar 1 al contador de jugadores
     $sqlUpdateJugadores = $con->prepare("
         UPDATE salas
         SET jugadores_actuales = GREATEST(jugadores_actuales - 1, 0)
@@ -36,12 +36,12 @@ try {
     ");
     $sqlUpdateJugadores->execute([$id_sala]);
 
-    // 3️⃣ Consultar cantidad actual de jugadores
+    // Consultar cantidad actual de jugadores
     $sqlCheck = $con->prepare("SELECT jugadores_actuales FROM salas WHERE id_sala = ?");
     $sqlCheck->execute([$id_sala]);
     $info = $sqlCheck->fetch(PDO::FETCH_ASSOC);
 
-    // 4️⃣ Si ya no hay jugadores, eliminar la sala
+    // Si ya no hay jugadores, eliminar la sala
     if ($info && intval($info['jugadores_actuales']) === 0) {
         $sqlDeleteSala = $con->prepare("DELETE FROM salas WHERE id_sala = ?");
         $sqlDeleteSala->execute([$id_sala]);
