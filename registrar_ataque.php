@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once("../config/database.php"); // Ajusta la ruta según tu estructura
+require_once("config/database.php"); // Ajusta la ruta según tu estructura
 
 // Conexión con PDO
 $db = new Database();

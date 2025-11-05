@@ -24,7 +24,7 @@ $jugadores = $sql->fetchAll(PDO::FETCH_ASSOC);
 // 🔹 Mostrar cada jugador con su imagen y estado
 foreach ($jugadores as $jugador) {
     echo '<div class="avatar-card">';
-    echo '<img src="../' . htmlspecialchars($jugador['avatar_foto']) . '" alt="Avatar">';
+    echo '<img src="/MK/' . htmlspecialchars($jugador['avatar_foto']) . '?v=' . time() . '" alt="Avatar">';
     echo '<span>' . htmlspecialchars($jugador['username']) . '</span>';
 
     if (!empty($jugador['listo'])) {

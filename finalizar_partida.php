@@ -1,40 +1,55 @@
 <?php
 session_start();
+
+try {
+    $conexion = new PDO("mysql:host=localhost;dbname=mk;charset=utf8", "root", "");
+    $conexion->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("DB error: " . $e->getMessage());
+}
+
+if (!isset($_SESSION['documento'])) {
+    header("Location: login.php");
+    exit;
+}
+
 $documento = $_SESSION['documento'];
-
-
 $id_partida = intval($_GET['id_partida'] ?? 0);
 if ($id_partida <= 0) die("ID de partida inválido.");
 
-
-$partida = mysqli_fetch_assoc(mysqli_query($conexion, "SELECT * FROM partidas WHERE id_partida = $id_partida"));
+// Obtener partida
+$sql = $conexion->prepare("SELECT * FROM partidas WHERE id_partida = ? LIMIT 1");
+$sql->execute([$id_partida]);
+$partida = $sql->fetch(PDO::FETCH_ASSOC);
 if (!$partida) die("Partida no encontrada.");
 
-$query_stats = mysqli_query($conexion, "
+// Obtener estadísticas de jugadores
+$sql = $conexion->prepare("
     SELECT u.username, a.avatar_foto, up.daño_realizado, up.eliminaciones, up.eliminado
     FROM usuario_partida up
-    JOIN usuario_armas ua ON up.id_arma = ua.id_arma
-    JOIN usuario u ON ua.documento = u.documento
+    JOIN usuario u ON up.documento = u.documento
     LEFT JOIN avatar a ON u.id_avatar = a.id_avatar
-    WHERE up.id_partida = $id_partida
+    WHERE up.id_partida = ?
     ORDER BY up.daño_realizado DESC
 ");
+$sql->execute([$id_partida]);
+$jugadores = $sql->fetchAll(PDO::FETCH_ASSOC);
 
-$jugadores = [];
-while ($row = mysqli_fetch_assoc($query_stats)) {
-    $jugadores[] = $row;
-}
-
-
+// Determinar ganador (jugador con mayor daño)
 $ganador = !empty($jugadores) ? $jugadores[0] : null;
 
-mysqli_query($conexion, "
+// Actualizar estado de la partida
+$sql = $conexion->prepare("
     UPDATE partidas 
     SET estado = 'finalizada', 
         fin = NOW(), 
-        resultado = '".($ganador ? $ganador['username'] : 'Sin ganador')."'
-    WHERE id_partida = $id_partida
+        resultado = :resultado
+    WHERE id_partida = :id
 ");
+$sql->execute([
+    ':resultado' => $ganador ? $ganador['username'] : 'Sin ganador',
+    ':id' => $id_partida
+]);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -132,18 +147,25 @@ body {
   box-shadow: 0 0 20px rgba(0, 255, 255, 0.9);
 }
 
+.avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 3px solid #00ffcc;
+  margin-top: 15px;
+}
 </style>
 </head>
 <body>
 
-<div class="container">
-  <h1 class="winner"> Resultado de la Partida #<?= $id_partida ?> </h1>
+<div class="container text-center">
+  <h1 class="winner">Resultado de la Partida #<?= $id_partida ?></h1>
 
   <?php if ($ganador): ?>
     <h2 class="text-light">Ganador: <span style="color:#ff5555;"><?= htmlspecialchars($ganador['username']) ?></span></h2>
-    <img src="../<?= htmlspecialchars($ganador['avatar_foto']) ?>" class="avatar" alt="Ganador">
+    <img src="/mk/<?= htmlspecialchars($ganador['avatar_foto']) ?>" class="avatar" alt="Ganador">
   <?php else: ?>
-    <h3 class="text-warning">No hubo ganador</h3>
+    <h3 class="no-winner">No hubo ganador</h3>
   <?php endif; ?>
 
   <div class="card mt-4 p-4">
@@ -170,7 +192,7 @@ body {
     </table>
   </div>
 
-  <a href="lobby.php?>" class="btn-volver">Volver </a>
+  <a href="lobby.php" class="btn-volver">Volver</a>
 </div>
 
 </body>

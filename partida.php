@@ -14,54 +14,108 @@ if (!isset($_SESSION['documento'])) {
 }
 
 $mi_documento = $_SESSION['documento'];
-
-// Obtener nivel del usuario
-$sql = $conexion->prepare("SELECT id_nivel FROM usuario WHERE documento = ?");
-$sql->execute([$mi_documento]);
-$nivel = $sql->fetchColumn();
-
-if (!$nivel) die("Nivel no encontrado.");
-
-// Obtener armas disponibles según nivel
-$sql = $conexion->prepare("SELECT id_arma, nombre, daño, tipo FROM armas WHERE id_nivel <= ?");
-$sql->execute([$nivel]);
-$armas_res = $sql->fetchAll(PDO::FETCH_ASSOC);
-
-// Validar partida
 $id_partida = intval($_GET['id_partida'] ?? 0);
 if ($id_partida <= 0) die("Partida no especificada.");
 
-// Obtener información de la partida
+// 🔹 Obtener información actual de la partida
 $sql = $conexion->prepare("SELECT * FROM partidas WHERE id_partida = ? LIMIT 1");
 $sql->execute([$id_partida]);
 $partida = $sql->fetch(PDO::FETCH_ASSOC);
 if (!$partida) die("Partida no encontrada.");
 
-// Validar que el usuario pertenezca a la partida
+// 🔹 Si no tiene inicio, lo fijamos una sola vez
+if (empty($partida['inicio'])) {
+    $update = $conexion->prepare("UPDATE partidas SET inicio = NOW(), estado = 'en_curso', duracion_segundos = 300 WHERE id_partida = ?");
+    $update->execute([$id_partida]);
+    $sql->execute([$id_partida]);
+    $partida = $sql->fetch(PDO::FETCH_ASSOC);
+}
+
+// 🔹 Validar que el usuario pertenezca a la partida
 $sql = $conexion->prepare("SELECT documento FROM usuario_partida WHERE id_partida = ?");
 $sql->execute([$id_partida]);
 $documentos = $sql->fetchAll(PDO::FETCH_COLUMN);
 if (!in_array($mi_documento, $documentos)) die("No perteneces a esta partida.");
 
-// Calcular tiempo restante (5 min = 300 seg)
-$inicio = strtotime($partida['inicio']);
-$ahora = time();
-$tiempo_pasado = $ahora - $inicio;
-$tiempo_restante = max(0, 300 - $tiempo_pasado);
-
-// Armas del usuario
-$sql = $conexion->prepare("
-    SELECT a.id_arma, a.nombre, a.daño, a.tipo 
-    FROM usuario_armas ua 
-    JOIN armas a ON ua.id_arma = a.id_arma 
-    WHERE ua.documento = ?
-");
+// 🔹 Obtener nivel y armas
+$sql = $conexion->prepare("SELECT id_nivel FROM usuario WHERE documento = ?");
 $sql->execute([$mi_documento]);
-$armas_usuario = $sql->fetchAll(PDO::FETCH_ASSOC);
+$nivel = $sql->fetchColumn();
 
-// Jugadores de la partida
+$sql = $conexion->prepare("SELECT id_arma, nombre, daño, tipo FROM armas WHERE id_nivel <= ?");
+$sql->execute([$nivel]);
+$armas_res = $sql->fetchAll(PDO::FETCH_ASSOC);
+
+// 🔹 Calcular tiempo restante persistente
+$inicio = strtotime($partida['inicio']);
+$duracion = $partida['duracion_segundos'] ?: 300;
+$tiempo_restante = max(0, $duracion - (time() - $inicio));
+
+if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
+    $sql = $conexion->prepare("SELECT inicio, estado, duracion_segundos FROM partidas WHERE id_partida = ?");
+    $sql->execute([$id_partida]);
+    $p = $sql->fetch(PDO::FETCH_ASSOC);
+    $inicio = strtotime($p['inicio']);
+    $duracion = $p['duracion_segundos'] ?: 300;
+    $tiempo_restante = max(0, $duracion - (time() - $inicio));
+
+    // 🔹 Obtener jugadores
+    $sql = $conexion->prepare("
+        SELECT up.documento, u.username, a.avatar_foto, up.vida_restante, up.puntos_acumulados, up.eliminado
+        FROM usuario_partida up
+        JOIN usuario u ON up.documento = u.documento
+        LEFT JOIN avatar a ON u.id_avatar = a.id_avatar
+        WHERE up.id_partida = ?
+        ORDER BY up.puntos_acumulados DESC
+    ");
+    $sql->execute([$id_partida]);
+    $jugadores = $sql->fetchAll(PDO::FETCH_ASSOC);
+
+    // 🔹 Revisar si la partida termina
+    $sql = $conexion->prepare("SELECT COUNT(*) FROM usuario_partida WHERE id_partida = ? AND eliminado = 0");
+    $sql->execute([$id_partida]);
+    $activos = (int)$sql->fetchColumn();
+
+    if (($activos <= 1 && (time() - $inicio) > 10) || $tiempo_restante <= 0) {
+        $sql = $conexion->prepare("
+            SELECT u.username 
+            FROM usuario_partida up
+            JOIN usuario u ON up.documento = u.documento
+            WHERE up.id_partida = ?
+            ORDER BY up.puntos_acumulados DESC
+            LIMIT 1
+        ");
+        $sql->execute([$id_partida]);
+        $winner = $sql->fetchColumn() ?: 'Sin ganador';
+
+        $upd = $conexion->prepare("UPDATE partidas SET estado='finalizada', fin=NOW(), resultado=? WHERE id_partida=?");
+        $upd->execute([$winner, $id_partida]);
+
+        echo '<script>window.location.href="finalizar_partida.php?id_partida='.$id_partida.'";</script>';
+        exit;
+    }
+
+    // 🔹 Mostrar tablero
+    foreach ($jugadores as $p) {
+        echo '<div class="col-6 mb-3">
+                <div class="d-flex gap-2 align-items-center">
+                    <img src="/mk/' . htmlspecialchars($p['avatar_foto']) . '" class="avatar">
+                    <div>
+                        <b>' . htmlspecialchars($p['username']) . '</b>
+                        <div class="small">Vida: ' . max(0, $p['vida_restante']) . '/1000</div>
+                        <div class="health"><div style="width:' . max(0, min(100, ($p['vida_restante'] / 10))) . '%"></div></div>
+                        <div class="small">Puntos: ' . intval($p['puntos_acumulados']) . '</div>
+                        <div class="small">Eliminado: ' . ($p['eliminado'] ? 'Sí' : 'No') . '</div>
+                    </div>
+                </div>
+            </div>';
+    }
+    exit;
+}
+
+// 🔹 Jugadores iniciales
 $sql = $conexion->prepare("
-    SELECT up.documento, u.username, u.id_avatar, up.vida_restante, up.puntos_acumulados, up.eliminado, a.avatar_foto
+    SELECT up.documento, u.username, a.avatar_foto, up.vida_restante, up.puntos_acumulados, up.eliminado
     FROM usuario_partida up
     JOIN usuario u ON up.documento = u.documento
     LEFT JOIN avatar a ON u.id_avatar = a.id_avatar
@@ -86,23 +140,29 @@ body{background:radial-gradient(#111,#000);color:#fff;font-family:Poppins,sans-s
 .health>div{height:100%;background:linear-gradient(90deg,#0f0,#ff0,#f00);}
 .small{font-size:0.9rem;color:#ddd;}
 .btn-attack{background:linear-gradient(90deg,#ff004c,#ff0033);border:none;color:#fff;padding:10px 20px;border-radius:8px;}
-#timer{font-weight:700;color:#ffdddd;}
+#timer{font-weight:700;color:#ffdddd;font-size:1.3rem;text-align:center;}
 </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-function refreshStatus(){
-  $("#status").load("partida_estado_ajax.php?id_partida=<?= $id_partida ?>");
-}
-setInterval(refreshStatus, 2000);
-
 let tiempo = <?= $tiempo_restante ?>;
-setInterval(()=> {
-  if (tiempo>0) tiempo--;
-  document.getElementById('timer').innerText = tiempo + "s";
-  if (tiempo === 0) {
+function refreshStatus(){
+  $("#playerList").load("<?= basename(__FILE__) ?>?id_partida=<?= $id_partida ?>&ajax=1");
+}
+setInterval(refreshStatus, 1000);
+$(document).ready(refreshStatus);
+
+function actualizarTimer() {
+  if (tiempo <= 0) {
+    clearInterval(timerInterval);
     window.location.href = "finalizar_partida.php?id_partida=<?= $id_partida ?>";
+  } else {
+    const min = String(Math.floor(tiempo / 60)).padStart(2, '0');
+    const seg = String(tiempo % 60).padStart(2, '0');
+    document.getElementById('timer').textContent = `⏳ ${min}:${seg}`;
+    tiempo--;
   }
-}, 1000);
+}
+const timerInterval = setInterval(actualizarTimer, 1000);
 </script>
 </head>
 <body>
@@ -112,10 +172,8 @@ setInterval(()=> {
       <h3>Partida #<?= $id_partida ?> — Mapa: <?= htmlspecialchars($partida['id_sala']) ?></h3>
       <div class="small">Estado: <?= htmlspecialchars($partida['estado']) ?></div>
     </div>
-    <div><div id="timer"><?= $tiempo_restante ?>s</div></div>
+    <div id="timer">⏳ Cargando...</div>
   </div>
-
-  <div id="status" class="mb-4"></div>
 
   <div class="row">
     <div class="col-md-6">
@@ -123,7 +181,6 @@ setInterval(()=> {
         <h5>Tu arma y objetivo</h5>
         <form action="registrar_ataque.php" method="POST">
           <input type="hidden" name="id_partida" value="<?= $id_partida ?>">
-
           <div class="mb-2">
             <label class="small">Selecciona arma</label>
             <select name="id_arma" class="form-select" required>
@@ -160,11 +217,11 @@ setInterval(()=> {
     <div class="col-md-6">
       <div class="card player-card">
         <h5>Jugadores (vida / puntos)</h5>
-        <div class="row">
+        <div id="playerList" class="row">
           <?php foreach ($jugadores_res as $p): ?>
           <div class="col-6 mb-3">
             <div class="d-flex gap-2 align-items-center">
-              <img src="../<?= htmlspecialchars($p['avatar_foto']) ?>" class="avatar">
+              <img src="/mk/<?= htmlspecialchars($p['avatar_foto']) ?>" class="avatar">
               <div>
                 <b><?= htmlspecialchars($p['username']) ?></b>
                 <div class="small">Vida: <?= max(0, $p['vida_restante']) ?>/1000</div>

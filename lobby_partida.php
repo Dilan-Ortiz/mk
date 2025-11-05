@@ -235,14 +235,14 @@ setInterval(actualizarLobby, 3000);
   <div id="jugadores" class="avatar-grid">
     <?php foreach ($jugadores as $jugador): ?>
       <div class="avatar-card">
-        <img src="../<?= htmlspecialchars($jugador['avatar_foto']) ?>" alt="Avatar">
+        <img src="/MK/<?= htmlspecialchars($jugador['avatar_foto']) ?>" alt="Avatar">
         <span><?= htmlspecialchars($jugador['username']) ?></span>
         <?php if ($jugador['listo']): ?>
           <div class="estado-listo">Listo</div>
         <?php else: ?>
           <div class="estado-no">Esperando...</div>
         <?php endif; ?>
-      </div>
+      </div>  
     <?php endforeach; ?>
   </div>
 
