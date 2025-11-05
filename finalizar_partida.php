@@ -1,12 +1,8 @@
 <?php
 session_start();
-
-try {
-    $conexion = new PDO("mysql:host=localhost;dbname=mk;charset=utf8", "root", "");
-    $conexion->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    die("DB error: " . $e->getMessage());
-}
+require_once("config/database.php");
+$db = new Database();
+$conexion = $db->conectar();
 
 if (!isset($_SESSION['documento'])) {
     header("Location: login.php");
@@ -17,28 +13,43 @@ $documento = $_SESSION['documento'];
 $id_partida = intval($_GET['id_partida'] ?? 0);
 if ($id_partida <= 0) die("ID de partida inválido.");
 
-// Obtener partida
+// 🔹 Obtener datos de la partida
 $sql = $conexion->prepare("SELECT * FROM partidas WHERE id_partida = ? LIMIT 1");
 $sql->execute([$id_partida]);
 $partida = $sql->fetch(PDO::FETCH_ASSOC);
 if (!$partida) die("Partida no encontrada.");
 
-// Obtener estadísticas de jugadores
+// 🔹 Obtener estadísticas desde usuario_partida
 $sql = $conexion->prepare("
-    SELECT u.username, a.avatar_foto, up.daño_realizado, up.eliminaciones, up.eliminado
+    SELECT 
+        u.username,
+        a.avatar_foto,
+        up.puntos_acumulados,
+        up.vida_restante,
+        up.eliminado,
+        COALESCE(up.eliminaciones, 0) AS eliminaciones
     FROM usuario_partida up
     JOIN usuario u ON up.documento = u.documento
     LEFT JOIN avatar a ON u.id_avatar = a.id_avatar
     WHERE up.id_partida = ?
-    ORDER BY up.daño_realizado DESC
+    ORDER BY up.puntos_acumulados DESC
 ");
 $sql->execute([$id_partida]);
 $jugadores = $sql->fetchAll(PDO::FETCH_ASSOC);
 
-// Determinar ganador (jugador con mayor daño)
-$ganador = !empty($jugadores) ? $jugadores[0] : null;
+// 🔹 Determinar ganador (el de más puntos o el único vivo)
+$ganador = null;
+foreach ($jugadores as $j) {
+    if (!$j['eliminado']) {
+        $ganador = $j;
+        break;
+    }
+}
+if (!$ganador && !empty($jugadores)) {
+    $ganador = $jugadores[0]; // fallback por puntos
+}
 
-// Actualizar estado de la partida
+// 🔹 Actualizar estado de la partida
 $sql = $conexion->prepare("
     UPDATE partidas 
     SET estado = 'finalizada', 
@@ -70,12 +81,10 @@ body {
   align-items: center;
   backdrop-filter: brightness(0.7);
 }
-
 .container {
   max-width: 950px;
   width: 90%;
 }
-
 .card {
   background: rgba(0, 0, 0, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -86,7 +95,6 @@ body {
   color: #fff;
   backdrop-filter: blur(5px);
 }
-
 .winner {
   color: #00ffcc;
   font-size: 2.2rem;
@@ -94,21 +102,18 @@ body {
   text-shadow: 0 0 10px #00ffcc;
   margin-bottom: 10px;
 }
-
 .no-winner {
   color: #ffd700;
   font-size: 1.5rem;
   margin-bottom: 25px;
   text-shadow: 0 0 10px #ffef99;
 }
-
 .table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
   font-size: 0.95rem;
 }
-
 .table th {
   background: rgba(255, 255, 255, 0.1);
   padding: 12px;
@@ -116,18 +121,15 @@ body {
   color: #00ffcc;
   letter-spacing: 0.5px;
 }
-
 .table td {
   padding: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   color: #fff;
 }
-
 .table tr:hover {
   background: rgba(255, 255, 255, 0.05);
   transition: background 0.3s;
 }
-
 .btn-volver {
   background: linear-gradient(90deg, #00ffcc, #0099ff);
   border: none;
@@ -140,13 +142,11 @@ body {
   box-shadow: 0 0 15px rgba(0, 255, 200, 0.6);
   transition: all 0.3s ease;
 }
-
 .btn-volver:hover {
   background: linear-gradient(90deg, #00ccaa, #0077ff);
   transform: scale(1.05);
   box-shadow: 0 0 20px rgba(0, 255, 255, 0.9);
 }
-
 .avatar {
   width: 120px;
   height: 120px;
@@ -174,8 +174,9 @@ body {
       <thead>
         <tr>
           <th>Jugador</th>
-          <th>Daño Realizado</th>
+          <th>Puntos</th>
           <th>Eliminaciones</th>
+          <th>Vida Restante</th>
           <th>Estado</th>
         </tr>
       </thead>
@@ -183,9 +184,10 @@ body {
         <?php foreach ($jugadores as $j): ?>
           <tr>
             <td><?= htmlspecialchars($j['username']) ?></td>
-            <td><?= intval($j['daño_realizado']) ?></td>
+            <td><?= intval($j['puntos_acumulados']) ?></td>
             <td><?= intval($j['eliminaciones']) ?></td>
-            <td><?= $j['eliminado'] ? 'Eliminado' : 'Activo' ?></td>
+            <td><?= intval($j['vida_restante']) ?></td>
+            <td><?= $j['eliminado'] ? 'Eliminado' : 'Vivo' ?></td>
           </tr>
         <?php endforeach; ?>
       </tbody>
